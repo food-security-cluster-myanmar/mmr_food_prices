@@ -57,6 +57,9 @@ theme_set(theme_light())
 
 ```
 
+[Food Security Cluster Myanmar homepage](https://food-security-cluster-myanmar.github.io/)
+
+<br><br>
 
 ## About the data 
 
@@ -274,7 +277,7 @@ prices %>%
           strip.background = element_rect(fill = "#212121"),
           axis.text.x = element_text(size = 7)) + 
   guides(colour = guide_legend(nrow = 1)) +
-  labs(x = "% change in prices", y = "",  
+  labs(x = "% change in prices since 2020", y = "",  
        title = "Changes in commodity prices, 2020-2022",
        subtitle = "Prices are MMK per kg, except for palm oil which is MMK per litre; red line indicates a 100% increase",
        caption = "Data sources: WFP and Mercy Corps MAU") 
@@ -454,7 +457,7 @@ ag_mali %>%
   theme_void() + 
   labs(fill = "sown area (acres)", 
        title = "Agricultural area sown by township",
-       subtitle = "and locations surveyed for commodity prices", 
+       subtitle = "Blue dots are markets where prices were surveyed", 
        caption = "Data sources: Ministry of Agriculture and Irrigation and WFP") +
   theme(plot.caption=element_text(hjust = 0.5),
         plot.background = element_rect(fill = "white", colour = NA),
@@ -476,7 +479,7 @@ pcode3_shape %>%
   theme_void() + 
   labs(fill = "Conflict score", 
        title = "Conflict score by township",
-       subtitle = "and locations surveyed for commodity prices", 
+       subtitle = "Blue dots are markets where prices were surveyed", 
        caption = "Data sources: ACLED (acleddata.com) and WFP") +
   theme(plot.caption=element_text(hjust = 0.5),
         plot.background = element_rect(fill = "white", colour = NA),
