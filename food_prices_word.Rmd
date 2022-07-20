@@ -426,9 +426,9 @@ ag_mali %>%
   theme_void() + 
   labs(fill = "sown area (acres)", 
        title = "Agricultural area sown by township",
-       subtitle = "And locations surveyed for commodity prices", 
+       subtitle = "and locations surveyed for commodity prices", 
        caption = "Data sources: Ministry of Agriculture and Irrigation and WFP") +
-  theme(plot.caption=element_text(hjust = 0.5),
+  theme(plot.caption = element_text(hjust = 0.5),
         plot.background = element_rect(fill = "white", colour = NA),
         plot.title = element_text(hjust = .5)) + 
 
@@ -447,9 +447,9 @@ pcode3_shape %>%
   theme_void() + 
   labs(fill = "Conflict score", 
        title = "Conflict score by township",
-       subtitle = "And locations surveyed for commodity prices", 
+       subtitle = "and locations surveyed for commodity prices", 
        caption = "Data sources: ACLED (acleddata.com) and WFP") +
-  theme(plot.caption=element_text(hjust = 0.5),
+  theme(plot.caption = element_text(hjust = 0.5),
         plot.background = element_rect(fill = "white", colour = NA),
         plot.title = element_text(hjust = .5))
 

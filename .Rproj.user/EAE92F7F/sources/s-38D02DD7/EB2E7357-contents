@@ -239,7 +239,7 @@ Additionally, given the trends in rice prices, it is probable that the earnings 
 <br>
 
 
-```{r fig.height=6}
+```{r facet-increase-commodity, fig.height=7}
 prices %>% 
   filter(pricetype == "Retail") %>% 
   select(commodity, admin1, admin2, date, price, market, year) %>% 
@@ -379,7 +379,7 @@ Below, volatility is plotted against price. For most commodities, price volatili
 
 <br>
 
-```{r volatility-facet, fig.height=6}
+```{r volatility-facet, fig.height=7}
 
 prices %>% 
   filter(pricetype == "Retail" & unit %in% c("KG", "L")) %>% 
@@ -444,21 +444,22 @@ ag_mali %>%
   st_as_sf() %>%
   ggplot() +
   geom_sf(aes(fill = area_sown), size = 0.1) + 
-  geom_sf(data = pcode1_shape, alpha = 0, colour = "black", size = .5) +
+  geom_sf(data = pcode1_shape, alpha = 0, colour = "black", size = .4) +
   geom_point(data = prices %>% 
                filter(year >= 2020) %>% 
                distinct(longitude, latitude), 
-             aes(x = longitude, y = latitude), size = 1.5, alpha = .7, colour = "#0000FF") + 
+             aes(x = longitude, y = latitude), size = 1.5, alpha = .6, colour = "#0000FF") + 
   scale_fill_viridis_c(direction = -1, label = scales::comma, 
                        breaks = c(0, 50000, 200000, 400000, 600000, 750000)) +
   theme_void() + 
   labs(fill = "sown area (acres)", 
        title = "Agricultural area sown by township",
-       subtitle = "And locations surveyed for commodity prices", 
+       subtitle = "and locations surveyed for commodity prices", 
        caption = "Data sources: Ministry of Agriculture and Irrigation and WFP") +
   theme(plot.caption=element_text(hjust = 0.5),
         plot.background = element_rect(fill = "white", colour = NA),
-        plot.title = element_text(hjust = .5)) + 
+        plot.title = element_text(hjust = .5), 
+        plot.subtitle = element_text(hjust = .5)) + 
 
 pcode3_shape %>% 
   left_join(conflict_score %>% 
@@ -466,20 +467,21 @@ pcode3_shape %>%
             by = "admin3_pcode") %>% 
   ggplot() + 
   geom_sf(aes(fill = conflict_score), size = .1) + 
-  geom_sf(data = pcode1_shape, alpha = 0, colour = "black", size = .5) + 
+  geom_sf(data = pcode1_shape, alpha = 0, colour = "black", size = .4) + 
   geom_point(data = prices %>% 
                filter(year >= 2020) %>% 
                distinct(longitude, latitude), 
-             aes(x = longitude, y = latitude), size = 1.5, alpha = .7, colour = "#0000FF") + 
+             aes(x = longitude, y = latitude), size = 1.5, alpha = .6, colour = "#0000FF") + 
   scale_fill_viridis(option = "magma", direction = -1) + 
   theme_void() + 
   labs(fill = "Conflict score", 
        title = "Conflict score by township",
-       subtitle = "And locations surveyed for commodity prices", 
+       subtitle = "and locations surveyed for commodity prices", 
        caption = "Data sources: ACLED (acleddata.com) and WFP") +
   theme(plot.caption=element_text(hjust = 0.5),
         plot.background = element_rect(fill = "white", colour = NA),
-        plot.title = element_text(hjust = .5))
+        plot.title = element_text(hjust = .5), 
+        plot.subtitle = element_text(hjust = .5))
 
 ```
 
