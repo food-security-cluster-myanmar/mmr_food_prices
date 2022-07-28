@@ -49,8 +49,26 @@ library(patchwork)
 library(kableExtra)
 library(sf)
 library(DT)
+library(here)
+library(tidytext)
+library(ggforce)
+library(pander)
 
 theme_set(theme_light())
+
+# disabling scientific notation
+options(scipen = 999)
+
+# pander tables all in one row
+panderOptions('table.split.table', Inf)
+
+# pander thousands separator
+panderOptions("big.mark", ",")
+
+# replace 
+opts <- options(knitr.kable.NA = "")
+
+`%out%` <- Negate(`%in%`)
 
 # show_col(hue_pal()(6)) 
 # hue_pal()(6) %>% print()
@@ -76,6 +94,22 @@ prices <- read_csv("./data/wfp_food_prices_mmr.csv") %>%
          year = year(date)) %>% 
   mutate(source = "WFP")
 
+lanka <- read_csv("./data/wfp_food_prices_lka.csv") %>% 
+  filter(!row_number() %in% c(1)) %>% 
+  mutate_at(vars(longitude, latitude, price, usdprice),
+            ~ as.numeric(.x)) %>% 
+  mutate(date = ymd(date), 
+         year = year(date)) %>% 
+  mutate(source = "WFP")
+
+cam <- read_csv("./data/wfp_food_prices_khm.csv") %>% 
+  filter(!row_number() %in% c(1)) %>% 
+  mutate_at(vars(longitude, latitude, price, usdprice),
+            ~ as.numeric(.x)) %>% 
+  mutate(date = ymd(date), 
+         year = year(date)) %>% 
+  mutate(source = "WFP")
+
 # I wish I could do this whole process with something like
 # mau <- dir("data, full.names = TRUE) %>% map_df(read_csv)
 # But unfortunately, these files require some cleaning 
@@ -89,16 +123,14 @@ mau_list <- vector("list", length(mau_files))
 # The for loop for cleaning and merging 
 
 for(i in 1:length(mau_files)) {
-  
- mau_list[[i]] <- read_csv(paste0("./data/mpr_se_data/", mau_files[i])) %>%
-   clean_names() %>%
-   rename(commodity = x1) %>%
-   # Note that you can't just specify column types since the number of 
-   # columns is not consistent across the files
-   mutate_at(vars(-c(commodity, category)), ~ as.numeric(.x)) %>%
-   pivot_longer(-c(commodity, category), 
+
+mau_list[[i]] <- read_csv(paste0("./data/mpr_se_data/", mau_files[i])) %>%
+   clean_names() %>% 
+  rename(commodity = x1) %>% 
+  mutate_at(vars(-c(commodity, category)), ~ as.double(.x)) %>%
+  pivot_longer(cols = -c(commodity, category), 
          names_to = "location", values_to = "price") %>% 
-   mutate(filename = paste0(mau_files[i]),
+  mutate(filename = paste0(mau_files[i]),
           date = str_remove(filename, "MPR_SE_"),
           date = str_remove(date, ".csv"), 
           date = ym(date) + days(14), 
@@ -107,8 +139,8 @@ for(i in 1:length(mau_files)) {
    # Converting viss into kg
    mutate(price = ifelse(str_detect(commodity, "viss"), price * 1.63293, price),
           commodity = str_replace(commodity, "viss", "kg"))
- 
- mau <- bind_rows(mau_list) %>%
+
+mau <- bind_rows(mau_list) %>%
    rename(admin2 = location) %>% 
    left_join(prices %>% select(admin1, admin2), by = "admin2") %>% 
    mutate(admin1 = case_when(admin2 == "Hpapun" ~ "Kayin", 
@@ -124,7 +156,6 @@ for(i in 1:length(mau_files)) {
                             "Chicken (1 kg)" = "Meat (chicken)"), 
          market = NA_real_, 
          year = year(date))
-    
 }
 
 # shapefiles
@@ -148,11 +179,11 @@ conflict_score <- read_csv("./data/conflict_score2.csv")
 ag_mali <- read_csv("./data/ag_mali.csv")
 ```
 
+
+
 <br><br><br>
 
-## 1. Price increases
-
-### 1.1 Food prices vs. inflation
+## 1 Food prices vs. inflation
 
 Inflation in food commodities has largely outstripped the overall pace of inflation in Myanmar as a whole. In the plot below, commodities which have been sufficiently measured (more than 1,000 observations between 2020 and the present), the bars are coloured on the number of observations where prices have increased more than 1% a month -- for reference, this is roughly equivalent to the official inflation rate of 12.63% (Central Statistics Organisation) for the whole of 2021. 
 
@@ -197,103 +228,171 @@ prices %>%
   
 ```
 
+
+<br><br><br>
+
+## 2. Food prices over time
+
+
+The plots below show the trends in prices for monitored commodities, between 2021/01 and 2022/05. Each point is a singular observation of a single commodity in a single market. 
+
 <br>
-
-The table below summarises, by commodity, the average month-on-month increase in prices. However, these are just countrywide averages and not representative of the range of price shocks and stresses experienced throughout the country. In particular, though tomato prices have experienced a high rate of increase, this average actually esconds the true nature of the problem. It is best to use the table below as a simple reference. 
-
-<br>
-
-```{r table-commodities-mom}
+```{r table-commodities-mom, fig.height=8}
 prices %>% 
   filter(pricetype == "Retail") %>% 
   select(commodity, admin1, admin2, date, price, market, year) %>% 
   rbind(mau %>% select(-filename)) %>% 
-  filter(year >= 2021 & price > 20) %>%  
+  filter(year >= 2021 & price > 20 & price < 5000) %>%  
   group_by(date, commodity, admin1, admin2) %>% 
   summarise(price = mean(price)) %>% 
   arrange(date, commodity) %>% 
   group_by(commodity, admin1, admin2) %>% 
   mutate(mom = (price - lag(price)) / lag(price)) %>%  
   filter(!is.na(mom)) %>%
-  filter(commodity %in% c("Salt", "Tomatoes (local)", "Rice (low quality)", 
-                          "Pulses", "Oil (palm)", "Onions (local)")) %>% 
-  group_by(commodity) %>% 
-  summarise(mom = round(mean(mom, na.rm = TRUE) * 100, digits = 2)) %>% 
-  rename(`%month_on_month_change` = mom) %>% 
-  mutate(commodity = fct_reorder(commodity, -`%month_on_month_change`)) %>%
-  # Somehow it needs the arrange function for the fct_reorder to appear
-  arrange(commodity) %>% 
-  kable(caption = "Average month-on-month increase in prices\n2021/01 - 2022/05") %>% 
-  kable_classic_2("striped", position = "left", full_width = FALSE) %>% 
-  footnote("Data sources: WFP and Mercy Corps MAU", 
-           general_title = "")
+  # filter(commodity %in% c("Salt", "Tomatoes (local)", "Rice (low quality)", 
+  #                         "Pulses", "Oil (palm)", "Onions (local)")) %>% 
+  mutate(direction = ifelse(mom > 0, "increase", "decrease"), 
+         count = 1) %>% 
+  group_by(date, commodity, admin1, direction) %>% 
+  summarise(price = mean(price), 
+            mom = abs(mean(mom)), 
+            pc = sum(count),
+            .groups = "drop") %>% 
+  distinct(date, commodity, admin1, direction,
+           price, mom, pc) %>% 
+  mutate(facet = paste0(commodity, "_", direction)) %>% 
+  filter(commodity %out% c("Cooking Pot (4 cans)",
+                           "Fish Paste (1 kg)", 
+                           "Garlic (1 kg)",
+                           "Jerry Can", 
+                           "Women's Longyi")) %>% 
+  ggplot(aes(x = date, y = price)) + 
+  geom_point(aes(size = price), alpha = .3) + 
+  guides(alpha = "none") + 
+  geom_smooth(se = FALSE) + 
+  scale_x_date(breaks = "3 months", date_labels = "%Y-%b") +
+  scale_y_continuous(labels = comma) + 
+  scale_size_continuous(range = c(.3, 2)) +
+  labs(colour = "Price\ndirection",
+       x = "Date",
+       y = "Price of commodity (MMK)", 
+       title = "Overall price trends by state (2021/01 - 2022/05)", 
+       subtitle = "Each point is a single observation of a single commodity in a single market;  size is price", 
+       caption = "Sources: WFP and Mercy Corps MAU") +
+  facet_wrap(~ commodity) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1), 
+        strip.text = element_text(size = 8, face = "bold"),
+        strip.background = element_rect(fill = "#212121"), 
+        legend.position = "none")
+  
+
 
 ```
+
 
-<br><br>
+<br>
+
+The plots below show the historical price trends of key commodities. The fluctuations in the prices of onions and tomatoes have been historically much more volatile. The last time prices saw a major drop was in the 2009 economic crisis.  Palm oil, on the other hand, has seen a recent and very acute increase in prices. This is also true, to a lesser extent, for pulses. 
+
+<br>
+
+```{r plot-historical-prices, fig.height=6.5}
+
+price_plot <- function(tbl) {
+  
+  tbl %>% 
+    group_by(date) %>% 
+    summarise(price = mean(price, na.rm = TRUE)) %>% 
+    ggplot(aes(x = date, y = price)) + 
+    geom_line() + 
+    scale_y_log10(labels = comma) + 
+    scale_x_date(breaks = "1 year", 
+                 date_labels = "%Y") + 
+    labs(x = "", 
+         y = "Price (MMK)") + 
+    theme(axis.text.x = element_text(angle = 60, 
+                                     hjust = 1, 
+                                     vjust = 1), 
+          plot.title = element_text(size = 7))
+  
+}
+
+prices %>% 
+  filter(str_detect(commodity, "Tomato")) %>% 
+  price_plot() +
+  labs(title = "Tomatoes, mean price 2008 - 2012 and 2020 - 2022") + 
+  
+prices %>% 
+  filter(str_detect(commodity, "palm")) %>% 
+  price_plot() + 
+  labs(title = "Palm oil, mean price 2008 - 2022") + 
+  
+prices %>%  
+  filter(str_detect(commodity, "low quality")) %>% 
+  price_plot() + 
+  labs(title = "Rice (low quality), mean price 2008 - 2022") + 
+  
+prices %>%  
+  filter(str_detect(commodity, "Onions")) %>% 
+  price_plot() + 
+  labs(title = "Onions, mean price 2008 - 2012 and 2020 - 2022") + 
+  
+prices %>%  
+  filter(str_detect(commodity, "Pulses")) %>% 
+  price_plot() + 
+  labs(title = "Pulses, mean price 2012 - 2022") +
+
+prices %>%  
+  filter(str_detect(commodity, "Eggs")) %>% 
+  price_plot() + 
+  labs(title = "Eggs, mean price 2021 - 2022") +
+  
+  
+  plot_layout(nrow = 2) + 
+  plot_annotation("Historical price trends of key commodities", 
+                  caption = "Sources: WFP and Mercy Corps MAU")
+```
+
+<br><br><br>
 
 
-### 1.2 Food prices over time
 
 Once aggregated at state level, Shan East is visibly an area of concern, having experienced the largest or near-the-largest price increases in salt, rice, tomatoes, pulses and onions. Whilst price shocks are prevalent across the entire country, the situation does not appear to be as severe in Bago. 
 
 Additionally, given the trends in rice prices, it is probable that the earnings of rice producers, the largest group of farmers in Myanmar, have not been able to keep up with price increases in other key food commodities. 
-
 <br>
 
-
-```{r facet-increase-commodity, fig.height=7}
-prices %>% 
-  filter(pricetype == "Retail") %>% 
-  select(commodity, admin1, admin2, date, price, market, year) %>% 
-  rbind(mau %>% select(-filename)) %>% 
-  filter(year >= 2020) %>%  
-  group_by(commodity) %>% 
-  mutate(count = sum(!is.na(commodity))) %>% 
-  ungroup() %>% 
-  filter(count > 500 & price > 20) %>%
-  group_by(date, commodity, admin1) %>% 
-  summarise(price = mean(price)) %>% 
-  filter(commodity %in% c("Salt", "Tomatoes (local)", "Rice (low quality)", 
-                          "Pulses", "Oil (palm)", "Onions (local)")) %>% 
-  group_by(commodity, admin1) %>% 
-  arrange(date) %>% 
-  filter(row_number() == 1 | row_number() == n()) %>%
-  mutate(order = c("first", "last")) %>%
-  select(-date) %>% 
-  pivot_wider(names_from = order, values_from = price) %>% 
-  mutate(difference = (last - first) / first, 
-         # this changes the anomalous value for salt in Shan East
-         difference = ifelse(difference > 2.5, 2.5, difference)) %>%
-  ggplot(aes(x = difference, y = fct_rev(admin1), fill = commodity)) + 
-  geom_vline(xintercept = 1, lty = 2, colour = "red") +
-  geom_col(position = position_dodge(width = .9)) + 
-  facet_wrap(~commodity) +
-  scale_fill_manual(values = c("#4686fbff", "#26A69A", "#30123bff",
-                               "#e4460aff", "#e4cf5bff", "#9c179eff")) +
-  scale_x_continuous(labels = percent, breaks = seq(-1, 2.5, by = .5)) +
-    theme(legend.position = "none",
-          strip.text = element_text(size = 10, face = "bold"),
-          strip.background = element_rect(fill = "#212121"),
-          axis.text.x = element_text(size = 7)) + 
-  guides(colour = guide_legend(nrow = 1)) +
-  labs(x = "% change in prices since 2020", y = "",  
-       title = "Changes in commodity prices, 2020-2022",
-       subtitle = "Prices are MMK per kg, except for palm oil which is MMK per litre; red line indicates a 100% increase",
-       caption = "Data sources: WFP and Mercy Corps MAU") 
-  
-```
-
-<br>
-
-The plots below are now faceted by state, with the date on the x-axis and prices in MMK on the y-axis. To recall what was mentioned earlier about tomatoes,their prices have largely declined overall in comparison to their value in 2020 in spite of experiencing severe month-on-month price increases. The plot below makes clear why that is -- their prices are extremely volatile, ramping up dramatically, then crashing. 
+The plots below are faceted by state, with the date on the x-axis and prices in MMK on the y-axis. To recall what was mentioned earlier about tomatoes,their prices have largely declined overall in comparison to their value in 2020 in spite of experiencing severe month-on-month price increases. The plot below makes clear why that is -- their prices are extremely volatile, ramping up dramatically, then crashing. 
 
 Price shocks can be observed here by looking at spikes in each of the lines. While stress is indicated by an overall uptrend in the line. Sagaing and Kayah are notable for their large and constant price shocks, with food prices spiking repeatedly. Shan North would be an example of an area under constant stress, with food prices constantly increasing. 
 
+In states such as Mon, Tanintharyi and Kayin, the seasonal rise and dip in prices is observed particularly clearly in the prices of onions. In Magway and Kayah, prices are still seasonal, but fluctuate to a much greater extent. However, it is clear that the fluctuations in the prices of tomatoes do not have much historical precedent. 
+
+
 <br>
 
-
 ```{r food-prices-facet, fig.height=7}
+
+mean_price <- prices %>% 
+  filter(pricetype == "Retail") %>% 
+  select(commodity, admin1, admin2, date, price, market, year) %>% 
+  rbind(mau %>% select(-filename)) %>% 
+  filter(year >= 2020) %>%  
+  group_by(commodity) %>% 
+  mutate(count = sum(!is.na(commodity))) %>% 
+  ungroup() %>% 
+  filter(count > 500 & price > 20) %>%
+  group_by(date, commodity, admin1) %>% 
+  summarise(price = mean(price), .groups = "drop") %>% 
+  filter(commodity %in% c("Salt", "Tomatoes (local)", "Rice (low quality)",  
+                          "Pulses", "Oil (palm)", "Onions (local)")) %>% 
+  mutate(commodity = recode(commodity, "Eggs (local)" = "10 Eggs (local)")) %>% 
+  group_by(date, commodity, admin1) %>% 
+  slice(which.min(date)) %>%
+  group_by(admin1) %>% 
+  summarise(mean = mean(price))
+
+
 prices %>% 
   filter(pricetype == "Retail") %>% 
   select(commodity, admin1, admin2, date, price, market, year) %>% 
@@ -305,16 +404,20 @@ prices %>%
   filter(count > 500 & price > 20) %>%
   group_by(date, commodity, admin1) %>% 
   summarise(price = mean(price)) %>% 
+  # Excluding an outlier from Shan (East)
+  mutate(price = ifelse(admin1 == "Shan (East)" & price < 600, 600, price)) %>% 
   filter(commodity %in% c("Salt", "Tomatoes (local)", "Rice (low quality)",  
                           "Pulses", "Oil (palm)", "Onions (local)")) %>% 
   mutate(commodity = recode(commodity, "Eggs (local)" = "10 Eggs (local)")) %>% 
   ggplot(aes(x = date, y = price, colour = commodity, group = commodity)) +
+  geom_abline(slope = 1, intercept = 1000) +
   geom_line(size = .5) + 
   facet_wrap(~ admin1) +
   scale_x_date(breaks = "1 year", date_labels = "%Y") + 
+  scale_y_log10( labels = comma) + 
   scale_colour_manual(values = c("#4686fbff", "#26A69A", "#30123bff", 
                                  "#e4460aff", "#e4cf5bff", "#9c179eff")) +
-  scale_y_continuous(labels = comma) + 
+  # scale_y_continuous(labels = comma) + 
   labs(x = "", y = "Price in MMK", colour = "", 
        title = "Average food commodity prices per state, 2020-2022",
        subtitle = "Prices are MMK per kg, except for palm oil which is MMK per litre",
@@ -323,60 +426,32 @@ prices %>%
         strip.text = element_text(size = 8.5, face = "bold"), 
         strip.background = element_rect(fill = "#212121")) + 
   guides(colour = guide_legend(nrow = 1))
-  
+ 
 
 ```
 
 <br>
 
-Palm oil is most expensive in Sagaing, though all areas have experienced significant price increases. In addition to tomatoes, palm oil and pulses have also experienced significant price volatility, which will be discussed in the next section. 
+Shan (East), Sagaing and Shan (North), all notable for their higher than average prices across all commodities
+
+Palm oil is most expensive in Sagaing, though all areas have experienced significant price increases. In addition to tomatoes, palm oil and pulses have also experienced significant price volatility, which will be discussed in the next section.
+
+
+
+<br>
+
+
+
+ 
 
 <br><br><br>
 
 
-## 2. Price shocks and volatility
+## 3. Price shocks and volatility
 
 Price volatility, represented below by the standard deviation in prices, has been most pronounced amongst palm oil, pulses and tomatoes, with tomatoes displaying particularly extreme volatility in 2022. 
 
 It is currently unclear whether this is due to its nature as a crop or whether this has been a general trend amongst other fruits and vegetables. Onions, which were one of the few other commodities whose prices have been measured sufficiently, has only displayed price fluctuations similar to tomatoes in Kayah and Shan North.  
-
-The boxplots below rank commodities in order of the standard deviations in their prices, with higher standard deviations indicating higher volatility. The solid black line in the centre of each of the coloured boxes indicates the standard deviation, with the box showing the upper and lower bounds. 
-
-<br>
-
-```{r fig.height=6}
-prices %>% 
-  filter(pricetype == "Retail" & unit %in% c("KG", "L")) %>% 
-  select(commodity, admin1, admin2, date, price, market, year) %>% 
-  rbind(mau %>% select(-filename)) %>% 
-  filter(year >= 2021) %>%  
-  group_by(commodity) %>% 
-  mutate(count = sum(!is.na(commodity))) %>% 
-  ungroup() %>% 
-  filter(price > 20) %>%
-  group_by(date, commodity, admin2, admin1) %>% 
-  mutate(sd = sd(price, na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  mutate(count = ifelse(!is.na(commodity), 1, 0)) %>% 
-  filter(!is.na(sd)) %>%
-  filter(commodity %in% c("Salt", "Tomatoes (local)", "Rice (low quality)", 
-                          "Pulses", "Oil (palm)", "Onions (local)")) %>%
-  mutate(commodity = fct_reorder(commodity, sd)) %>%  
-  ggplot(aes(x = sd, y = commodity, fill = commodity)) + 
-  geom_boxplot(outlier.alpha = 0.5) + 
-  scale_x_log10() + 
-  theme(legend.position = "none", 
-        strip.text = element_text(size = 10, face = "bold"), 
-        strip.background = element_rect(fill = "#212121")) + 
-  facet_wrap(~ year, nrow = 2) + 
-  labs(x = "Standard deviation", 
-       y = "", 
-       title = "Price volatility amongst commonly surveyed commodities",
-       caption = "Data sources: WFP and Mercy Corps MAU")
-
-```
-
-<br>
 
 Below, volatility is plotted against price. For most commodities, price volatility was higher in 2022 than in 2021, indicated by the lines trending higher. Higher prices are somewhat associated with higher price volatility, though palm oil, rice in 2021 and tomatoes in 2022 experienced significant price volatility as prices became lower as well. The dips in each of the lines, usually where most of the points are clustered, roughly indicates the range in which prices are more stable. 
 
@@ -427,9 +502,92 @@ prices %>%
 
 <br><br><br>
 
-## 3. Maps and reference tables
+## 4. Comparisons with other countries
 
-### 3.1 Reference maps 
+
+Whilst inflation has not been as catastrophic as it has been in Sri Lanka, if the crisis in Myanmar is prolonged, food shortages are likely as global supply chain issues exist and countries continue to impose export bans to shore up domestic supplies. Furthermore, Myanmar has limited foreign currency it can use as a buffer. 
+
+<br>
+
+
+```{r}
+country_price <- function(tbl) {
+  
+  tbl %>% 
+    group_by(date, commodity) %>% 
+    summarise(price = mean(price)) %>% 
+    arrange(date, commodity) %>% 
+    group_by(commodity) %>% 
+    mutate(mom = (price - lag(price)) / lag(price)) %>% 
+    filter(!is.na(mom)) %>% 
+    ggplot(aes(x = date, y = price)) + 
+    geom_line(aes(colour = commodity)) + 
+    labs(colour = "") + 
+    scale_x_date(breaks = seq(from = as.Date("2003-01-01"), 
+                              to = as.Date("2022-06-01"), 
+                              by = "year"),
+                 date_labels = "%Y")
+}
+```
+
+
+
+
+```{r fig.height=8}
+lanka %>% 
+  filter(pricetype == "Retail") %>% 
+  filter(commodity %in% c("Wheat flour",
+                          "Rice (long grain)", 
+                          "Rice (red nadu)", 
+                          "Sugar", 
+                          # "Fuel (diesel)",
+                          "Fuel (petrol-gasoline)", 
+                          "Rice (white)")) %>% 
+  country_price() +
+  labs(x = "", y = "Price in LKR", 
+       title = "Sri Lanka, key commodities") +
+
+prices %>% 
+  filter(pricetype == "Retail") %>% 
+  filter(commodity %in% c("Salt", 
+                          "Tomatoes (local)", 
+                          "Rice (low quality)", 
+                          "Pulses", 
+                          "Oil (palm)", 
+                          "Onions (local)")) %>% 
+  country_price() +
+  labs(x = "", y = "Price in MMK", 
+       title = "Myanmar, key commodities") +
+  
+cam %>% 
+  filter(pricetype == "Retail") %>% 
+  filter(commodity %in% c("Rice (mixed, low quality)",
+                          "Meat (pork, with fat)", 
+                          "Oil (vegetable)", 
+                          "Wax gourd", 
+                          "Fish (snake head)",
+                          "Cabbage (chinese, flowering)")) %>% 
+  country_price() +
+  labs(x = "", y = "Price in KHR", 
+       title = "Cambodia, key commodities") +
+
+plot_layout(ncol = 1)
+
+
+```
+
+<br>
+
+At this stage, emergency stockpiling is not yet necessary, though given the fragility of the context in Myanmar, a major crisis may be sparked off by a change in the conflict or the onset of a major natural disaster. 
+
+There is little, programmatically, to be done about inflation. Aid agencies have neither the capacity nor the mandate to stabilise markets, though they may choose to invest in community resilience to help affected persons better weather these shocks and stresses. 
+
+<br><br><br>
+
+
+## 5. Reference maps and tables
+
+### 5.1 Reference maps 
 
 Ayeyarwady, Bago, Shan South and lower Sagaing have not been covered by food price monitoring. It is unclear if WFP or Mercy Corps' Market Analysis Unit have the capacity to expand into these areas. But Ayeyarwady and lower Sagaing remain of extreme interest to the response for both their massive agricultural output and, in the case of Sagaing, its grave exposure to conflict. 
 
@@ -480,7 +638,7 @@ pcode3_shape %>%
   labs(fill = "Conflict score", 
        title = "Conflict score by township",
        subtitle = "Blue dots are markets where prices were surveyed", 
-       caption = "Data sources: ACLED (acleddata.com) and WFP") +
+       caption = "Data sources: ACLED (acleddata.com) and FSC") +
   theme(plot.caption=element_text(hjust = 0.5),
         plot.background = element_rect(fill = "white", colour = NA),
         plot.title = element_text(hjust = .5), 
@@ -490,7 +648,7 @@ pcode3_shape %>%
 
 <br><br>
 
-### 3.2 Interactive reference table 
+### 5.2 Interactive reference table 
 
 ```{r DT}
 prices %>% 
