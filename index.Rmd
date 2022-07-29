@@ -183,7 +183,7 @@ ag_mali <- read_csv("./data/ag_mali.csv")
 
 <br><br><br>
 
-## 1 Food prices vs. inflation
+## 1. Food prices vs. inflation
 
 Inflation in food commodities has largely outstripped the overall pace of inflation in Myanmar as a whole. In the plot below, commodities which have been sufficiently measured (more than 1,000 observations between 2020 and the present), the bars are coloured on the number of observations where prices have increased more than 1% a month -- for reference, this is roughly equivalent to the official inflation rate of 12.63% (Central Statistics Organisation) for the whole of 2021. 
 
@@ -276,7 +276,7 @@ prices %>%
   labs(colour = "Price\ndirection",
        x = "Date",
        y = "Price of commodity (MMK)", 
-       title = "Overall price trends by state (2021/01 - 2022/05)", 
+       title = "Overall price trends by commodity, 2021/01 - 2022/05", 
        subtitle = "Each point is a single observation of a single commodity in a single market;  size is price", 
        caption = "Sources: WFP and Mercy Corps MAU") +
   facet_wrap(~ commodity) +
@@ -292,11 +292,11 @@ prices %>%
 
 <br>
 
-The plots below show the historical price trends of key commodities. The fluctuations in the prices of onions and tomatoes have been historically much more volatile. The last time prices saw a major drop was in the 2009 economic crisis.  Palm oil, on the other hand, has seen a recent and very acute increase in prices. This is also true, to a lesser extent, for pulses. 
+The plots below show the historical price trends of key commodities. The fluctuations in the prices of onions and tomatoes have been historically much more volatile. The last time prices saw a major drop was in the 2009 economic crisis. And following the trend, the prices of tomatoes is likely to rapidly increase. Palm oil, on the other hand, has seen a recent and very acute increase in prices.
 
 <br>
 
-```{r plot-historical-prices, fig.height=6.5}
+```{r plot-historical-prices, fig.height=7}
 
 price_plot <- function(tbl) {
   
@@ -348,10 +348,11 @@ prices %>%
   labs(title = "Eggs, mean price 2021 - 2022") +
   
   
-  plot_layout(nrow = 2) + 
+  plot_layout(ncol = 2) + 
   plot_annotation("Historical price trends of key commodities", 
                   caption = "Sources: WFP and Mercy Corps MAU")
 ```
+
 
 <br><br><br>
 
@@ -362,9 +363,7 @@ Once aggregated at state level, Shan East is visibly an area of concern, having 
 Additionally, given the trends in rice prices, it is probable that the earnings of rice producers, the largest group of farmers in Myanmar, have not been able to keep up with price increases in other key food commodities. 
 <br>
 
-The plots below are faceted by state, with the date on the x-axis and prices in MMK on the y-axis. To recall what was mentioned earlier about tomatoes,their prices have largely declined overall in comparison to their value in 2020 in spite of experiencing severe month-on-month price increases. The plot below makes clear why that is -- their prices are extremely volatile, ramping up dramatically, then crashing. 
-
-Price shocks can be observed here by looking at spikes in each of the lines. While stress is indicated by an overall uptrend in the line. Sagaing and Kayah are notable for their large and constant price shocks, with food prices spiking repeatedly. Shan North would be an example of an area under constant stress, with food prices constantly increasing. 
+The plots below are faceted by state, with the date on the x-axis and prices in MMK on the y-axis. Price shocks can be observed here by looking at spikes in each of the lines. 
 
 In states such as Mon, Tanintharyi and Kayin, the seasonal rise and dip in prices is observed particularly clearly in the prices of onions. In Magway and Kayah, prices are still seasonal, but fluctuate to a much greater extent. However, it is clear that the fluctuations in the prices of tomatoes do not have much historical precedent. 
 
@@ -432,17 +431,10 @@ prices %>%
 
 <br>
 
-Shan (East), Sagaing and Shan (North), all notable for their higher than average prices across all commodities
-
-Palm oil is most expensive in Sagaing, though all areas have experienced significant price increases. In addition to tomatoes, palm oil and pulses have also experienced significant price volatility, which will be discussed in the next section.
+Shan (East), Sagaing and Shan (North) are all notable for their higher than average prices across all commodities, notably their price of rice. Palm oil is most expensive in Sagaing, though all areas have experienced significant price increases. 
 
 
 
-<br>
-
-
-
- 
 
 <br><br><br>
 
@@ -480,7 +472,7 @@ prices %>%
   geom_jitter(alpha = .025) + 
   scale_x_log10(labels = comma, 
                 breaks = c(0, 100, 300, 1000, 3000, 9000)) + 
-  scale_y_log10() +  
+  scale_y_log10(labels = comma) +  
   scale_colour_manual(values = c("#F564E3", "#00BA38", "#619CFF", 
                                "#F8766D", "#B79F00", "#00BFC4")) + 
   geom_smooth(method = "loess", 
@@ -505,12 +497,18 @@ prices %>%
 ## 4. Comparisons with other countries
 
 
-Whilst inflation has not been as catastrophic as it has been in Sri Lanka, if the crisis in Myanmar is prolonged, food shortages are likely as global supply chain issues exist and countries continue to impose export bans to shore up domestic supplies. Furthermore, Myanmar has limited foreign currency it can use as a buffer. 
+Inflation has been catastrophic in Sri Lanka. The situation in Myanmar is comparatively more stable, yet is also under number stresses. Additionally, as the crisis is prolonged, the more likely the country is to suffer from global supply chain issues.
+
+The prices of rice in Myanmar have not undergone anywhere the same amount of inflation that they have in Sri Lanka. However, given the fragility of the context of Myanmar, it is not improbable that the onset of a major natural disaster or a rapid change in the conflict could deteriorate the situation further. 
+
+However, it is the duty of the central bank to manage inflation and stabilise markets. What is possible for aid agencies is to invest in community resilience so that vulnerable persons may better absorb the effects of and adapt to the upcoming shocks and stresses. 
+
+
 
 <br>
 
 
-```{r}
+```{r country-price}
 country_price <- function(tbl) {
   
   tbl %>% 
@@ -526,14 +524,16 @@ country_price <- function(tbl) {
     scale_x_date(breaks = seq(from = as.Date("2003-01-01"), 
                               to = as.Date("2022-06-01"), 
                               by = "year"),
-                 date_labels = "%Y")
+                 date_labels = "%Y") + 
+    scale_y_continuous(labels = comma) + 
+    theme(axis.text.x = element_text(angle = 30))
 }
 ```
 
 
 
 
-```{r fig.height=8}
+```{r country-plots, fig.height=8}
 lanka %>% 
   filter(pricetype == "Retail") %>% 
   filter(commodity %in% c("Wheat flour",
@@ -578,9 +578,60 @@ plot_layout(ncol = 1)
 
 <br>
 
-At this stage, emergency stockpiling is not yet necessary, though given the fragility of the context in Myanmar, a major crisis may be sparked off by a change in the conflict or the onset of a major natural disaster. 
+Cambodia was chosen as its GDP per capita is similar to that of Myanmmar's -- USD 1,512 vs. USD 1,400. The plots below show the trends in the prices of key Cambodian commodities over time. Unlike Myanmar, price increases in meat, rice and oil all began earlier than in Myanmar, with oil spiking around the onset of the COVID-19 pandemic in early 2020. The seasonal price variations in vegetables are also visible. 
 
-There is little, programmatically, to be done about inflation. Aid agencies have neither the capacity nor the mandate to stabilise markets, though they may choose to invest in community resilience to help affected persons better weather these shocks and stresses. 
+According to the World Bank, Myanmar's GDP in 2022 estimated to still be around 13 percent lower than in 2019. Additionally, the security situation in Myanmar leaves a lot to be desired. According to Fitch Solutions, the Cambodian government has said it would intervene to "contain increases in the prices of basic food products". Further [stating](https://www.phnompenhpost.com/special-reports/step-targeted-solutions-tame-runaway-inflation-economists-say), "we note higher risks of protests and public discontent with the government if economic conditions deteriorate significantly over the coming quarters.  
+
+Ultimately, the situation in Myanmar is much less stable than the one in Cambodia. And inflation is not yet at the level of price shocks that Sri Lanka is experiencing. 
+
+
+<br>
+
+```{r cam-historical-price, fig.height=7}
+
+cam %>% 
+  filter(commodity == "Rice (mixed, low quality)") %>% 
+  price_plot()  + 
+  labs(title = "Cambodia rice (mixed, low quality), average price over time", 
+       y = "Price in KHR") +
+
+cam %>% 
+  filter(commodity == "Meat (pork, with fat)") %>% 
+  price_plot() + 
+  labs(title = "Cambodia pork with fat, average price over time", 
+       y = "Price in KHR") +
+  
+cam %>% 
+  filter(commodity == "Oil (vegetable)") %>% 
+  price_plot() + 
+  labs(title = "Cambodia vegetable oil, average price over time", 
+       y = "Price in KHR") +
+
+cam %>% 
+  filter(commodity == "Wax gourd") %>% 
+  price_plot() + 
+  labs(title = "Cambodia wax gourd, average price over time", 
+       y = "Price in KHR") +
+  
+cam %>% 
+  filter(commodity == "Fish (snake head)") %>% 
+  price_plot() + 
+  labs(title = "Cambodia snake head fish, average price over time", 
+       y = "Price in KHR") +
+  
+cam %>% 
+  filter(commodity == "Cabbage (chinese, flowering)") %>% 
+  price_plot() + 
+  labs(title = "Cambodia chinese cabbage, average price over time", 
+       y = "Price in KHR") +
+  
+  plot_layout(ncol = 2) + 
+  plot_annotation("Cambodia, historical price trends of key commodities", 
+    caption = "Source: WFP")
+```
+
+
+
 
 <br><br><br>
 

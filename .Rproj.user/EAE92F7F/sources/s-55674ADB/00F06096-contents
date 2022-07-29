@@ -66,3 +66,15 @@ prices %>%
        title = "Changes in commodity prices, 01/2020 vs 01/2022",
        subtitle = "Prices are MMK per kg, except for palm oil which is MMK per litre; red line indicates a 100% increase",
        caption = "Data sources: WFP and Mercy Corps MAU") 
+
+filter(str_detect(commodity, 
+                  "Eggs|Tomato")) %>% 
+  arrange(date) %>% 
+  select(date, commodity, price, market) %>%
+  pivot_wider(names_from = commodity, values_from = price) %>% 
+  filter(is.na(Tomatoes)) %>% 
+  select(-Tomatoes) %>% 
+  mutate(duplicate = ifelse(`Eggs (local)` == `Tomatoes (local)`,
+                            TRUE, 
+                            FALSE)) %>% 
+  write_csv("./data/egg_tomato_duplicates.csv")
