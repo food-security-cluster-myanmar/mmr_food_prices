@@ -78,3 +78,67 @@ filter(str_detect(commodity,
                             TRUE, 
                             FALSE)) %>% 
   write_csv("./data/egg_tomato_duplicates.csv")
+
+## 3. Price shocks and volatility
+# I'm not really sure what to do with this section. It feels unfinished
+
+Price volatility, represented below by the standard deviation in prices, has been most pronounced amongst palm oil, pulses and tomatoes, with tomatoes displaying particularly extreme volatility in 2022. 
+
+It is currently unclear whether this is due to its nature as a crop or whether this has been a general trend amongst other fruits and vegetables. Onions, which were one of the few other commodities whose prices have been measured sufficiently, has only displayed price fluctuations similar to tomatoes in Kayah and Shan North.  
+
+Below, volatility is plotted against price. For most commodities, prices
+
+
+
+prices %>% 
+  filter(pricetype == "Retail" & unit %in% c("KG", "L")) %>% 
+  select(commodity, admin1, admin2, date, price, market, year) %>% 
+  rbind(mau %>% select(-filename)) %>% 
+  filter(year >= 2021) %>%  
+  group_by(commodity) %>% 
+  mutate(count = sum(!is.na(commodity))) %>% 
+  ungroup() %>% 
+  filter(price > 20) %>%
+  group_by(date, commodity, admin2, admin1) %>% 
+  group_by(commodity, year) %>% 
+  mutate(count = ifelse(!is.na(commodity), 1, 0)) %>% 
+  ungroup() %>% 
+  filter(!is.na(count)) %>%
+  filter(commodity %in% c("Salt", "Tomatoes (local)", "Rice (low quality)", 
+                          "Pulses", "Oil (palm)", "Onions (local)")) %>%
+  mutate(com_year = paste0(commodity, " - ", year),
+         com_year = fct_relevel(com_year, 
+                                c("Salt - 2021", 
+                                  "Salt - 2022", 
+                                  "Onions (local) - 2021", 
+                                  "Onions (local) - 2022", 
+                                  "Rice (low quality) - 2021", 
+                                  "Rice (low quality) - 2022", 
+                                  "Tomatoes (local) - 2021",
+                                  "Tomatoes (local) - 2022", 
+                                  "Pulses - 2021", 
+                                  "Pulses - 2022", 
+                                  "Oil (palm) - 2021", 
+                                  "Oil (palm) - 2022"))) %>%
+  ggplot(aes(y = price, x = com_year, colour = commodity)) +
+  geom_jitter(alpha = .05, 
+              aes(size = price)) + 
+  geom_boxplot(alpha = .5, 
+               outlier.alpha = .1,
+               size = 1.1) +
+  scale_y_log10(labels = comma, 
+                breaks = c(0, 100, 300, 600, 1000, 2000, 
+                           3000, 6000, 9000)) + 
+  scale_colour_manual(values = c("#F564E3", "#00BA38", "#619CFF", 
+                                 "#F8766D", "#B79F00", "#00BFC4")) + 
+  labs(x = "", 
+       y = "Price in MMK", 
+       colour = "", 
+       title = "Price volatility amongst commonly surveyed commodities", 
+       caption = "Data sources: WFP and Mercy Corps MAU") +
+  theme(legend.position = "none", 
+        axis.text.x = element_text(angle = 60, hjust = 1), 
+        strip.text = element_text(size = 10, face = "bold"), 
+        strip.background = element_rect(fill = "#212121"))
+
+```
