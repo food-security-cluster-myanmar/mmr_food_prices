@@ -1,0 +1,6 @@
+"0","ggsave(""state_facet.png"", height = 8, length = 11, units = ""in"", 
+       dpi = 300) 
+"
+"2","Error in png_dev(..., res = dpi, units = ""in"") : 
+  unused argument (length = 11)
+"

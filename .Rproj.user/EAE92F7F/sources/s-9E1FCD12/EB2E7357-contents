@@ -351,6 +351,7 @@ prices %>%
   plot_layout(ncol = 2) + 
   plot_annotation("Historical price trends of key commodities", 
                   caption = "Sources: WFP and Mercy Corps MAU")
+
 ```
 
 
@@ -427,6 +428,8 @@ prices %>%
   guides(colour = guide_legend(nrow = 1))
  
 
+# ggsave("state_facet.png", height = 8, width = 8,, units = "in", dpi = 300) 
+
 ```
 
 <br>
@@ -461,29 +464,29 @@ prices %>%
   ungroup() %>% 
   filter(price > 20) %>%
   group_by(date, commodity, admin2, admin1) %>% 
-  mutate(sd = sd(price, na.rm = TRUE) * 100) %>% 
-  ungroup() %>% 
+  group_by(commodity, year) %>% 
   mutate(count = ifelse(!is.na(commodity), 1, 0)) %>% 
-  filter(!is.na(sd)) %>%
+  ungroup() %>% 
+  filter(!is.na(count)) %>%
   filter(commodity %in% c("Salt", "Tomatoes (local)", "Rice (low quality)", 
                           "Pulses", "Oil (palm)", "Onions (local)")) %>%
-  mutate(com_year = paste0(commodity, " - ", year)) %>%
-  ggplot(aes(x = price, y = sd, colour = commodity)) + 
-  geom_jitter(alpha = .025) + 
-  scale_x_log10(labels = comma, 
-                breaks = c(0, 100, 300, 1000, 3000, 9000)) + 
-  scale_y_log10(labels = comma) +  
+  mutate(com_year = paste0(commodity, " - ", year),
+         com_year = fct_reorder(com_year, price)) %>%
+  ggplot(aes(y = price, x = com_year, colour = commodity)) +
+  geom_jitter(alpha = .05, 
+              aes(size = price)) + 
+  geom_boxplot(alpha = .5, 
+               outlier.alpha = .1,
+               size = 1.2) +
+  scale_y_log10(labels = comma, 
+                breaks = c(0, 100, 300, 600, 1000, 2000, 
+                           3000, 6000, 9000)) + 
   scale_colour_manual(values = c("#F564E3", "#00BA38", "#619CFF", 
                                "#F8766D", "#B79F00", "#00BFC4")) + 
-  geom_smooth(method = "loess", 
-              se = FALSE, 
-              size = .7) +
-  facet_wrap(~ com_year) + 
-  labs(x = "Price in MMK", 
-       y = "Standard deviation", 
+  labs(x = "", 
+       y = "Price in MMK", 
        colour = "", 
        title = "Price volatility amongst commonly surveyed commodities", 
-       subtitle = "Points are observations at individual markets", 
        caption = "Data sources: WFP and Mercy Corps MAU") +
   theme(legend.position = "none", 
         axis.text.x = element_text(angle = 60, hjust = 1), 
@@ -492,6 +495,7 @@ prices %>%
 
 ```
 
+
 <br><br><br>
 
 ## 4. Comparisons with other countries
@@ -499,9 +503,9 @@ prices %>%
 
 Inflation has been catastrophic in Sri Lanka. The situation in Myanmar is comparatively more stable, yet is also under number stresses. Additionally, as the crisis is prolonged, the more likely the country is to suffer from global supply chain issues.
 
-The prices of rice in Myanmar have not undergone anywhere the same amount of inflation that they have in Sri Lanka. However, given the fragility of the context of Myanmar, it is not improbable that the onset of a major natural disaster or a rapid change in the conflict could deteriorate the situation further. 
+The prices of rice in Myanmar have not undergone anywhere the same amount of inflation that they have in Sri Lanka. Inflation in Myanmar has been more a constant stress rather than the pure price shock experienced in Sri Lanka. However, given the fragility of the context of Myanmar, it is not improbable that the onset of a major natural disaster or a rapid change in the conflict could deteriorate the situation further. 
 
-However, it is the duty of the central bank to manage inflation and stabilise markets. What is possible for aid agencies is to invest in community resilience so that vulnerable persons may better absorb the effects of and adapt to the upcoming shocks and stresses. 
+It is the duty of the central bank to manage inflation and stabilise markets. What is possible for aid agencies is to invest in community resilience so that vulnerable persons may better absorb the effects of and adapt to the upcoming shocks and stresses. 
 
 
 
@@ -576,13 +580,16 @@ plot_layout(ncol = 1)
 
 ```
 
+
 <br>
 
-Cambodia was chosen as its GDP per capita is similar to that of Myanmmar's -- USD 1,512 vs. USD 1,400. The plots below show the trends in the prices of key Cambodian commodities over time. Unlike Myanmar, price increases in meat, rice and oil all began earlier than in Myanmar, with oil spiking around the onset of the COVID-19 pandemic in early 2020. The seasonal price variations in vegetables are also visible. 
+Cambodia was chosen as its GDP per capita is similar to that of Myanmmar's -- USD 1,512 vs. USD 1,400. The plots below show the trends in the prices of key Cambodian commodities over time. Unlike Myanmar, price increases in meat, rice and oil all began earlier than in Myanmar, with oil spiking around the onset of the COVID-19 pandemic in early 2020. 
+
+The seasonal price variations in vegetables seem much more set in their patterns and much less volatile than in Myanmar. 
 
 According to the World Bank, Myanmar's GDP in 2022 estimated to still be around 13 percent lower than in 2019. Additionally, the security situation in Myanmar leaves a lot to be desired. According to Fitch Solutions, the Cambodian government has said it would intervene to "contain increases in the prices of basic food products". Further [stating](https://www.phnompenhpost.com/special-reports/step-targeted-solutions-tame-runaway-inflation-economists-say), "we note higher risks of protests and public discontent with the government if economic conditions deteriorate significantly over the coming quarters.  
 
-Ultimately, the situation in Myanmar is much less stable than the one in Cambodia. And inflation is not yet at the level of price shocks that Sri Lanka is experiencing. 
+Ultimately, the situations in Myanmar is much less politically stable than the one in Cambodia and also has much more room for deterioration. Though inflation is not yet at the level of price shocks that Sri Lanka is experiencing. 
 
 
 <br>
