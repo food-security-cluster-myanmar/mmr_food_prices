@@ -274,7 +274,7 @@ prices %>%
   scale_y_continuous(labels = comma) + 
   scale_size_continuous(range = c(.3, 2)) +
   labs(colour = "Price\ndirection",
-       x = "Date",
+       x = "",
        y = "Price of commodity (MMK)", 
        title = "Overall price trends by commodity, 2021/01 - 2022/05", 
        subtitle = "Each point is a single observation of a single commodity in a single market;  size is price", 
