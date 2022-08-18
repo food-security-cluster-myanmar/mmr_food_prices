@@ -479,7 +479,7 @@ country_price <- function(tbl) {
 
 ```{r country-plots, fig.height=8}
 lanka %>% 
-  filter(pricetype == "Retail") %>% 
+  filter(pricetype == "Retail" & year >= 2014) %>% 
   filter(commodity %in% c("Wheat flour",
                           "Rice (long grain)", 
                           "Rice (red nadu)", 
@@ -492,7 +492,7 @@ lanka %>%
        title = "Sri Lanka, key commodities") +
 
 prices %>% 
-  filter(pricetype == "Retail") %>% 
+  filter(pricetype == "Retail" & year >= 2014) %>% 
   filter(commodity %in% c("Salt", 
                           "Tomatoes (local)", 
                           "Rice (low quality)", 
@@ -504,7 +504,7 @@ prices %>%
        title = "Myanmar, key commodities") +
   
 cam %>% 
-  filter(pricetype == "Retail") %>% 
+  filter(pricetype == "Retail" & year >= 2014) %>% 
   filter(commodity %in% c("Rice (mixed, low quality)",
                           "Meat (pork, with fat)", 
                           "Oil (vegetable)", 
@@ -523,7 +523,7 @@ plot_layout(ncol = 1)
 
 <br>
 
-Cambodia was chosen as its GDP per capita is similar to that of Myanmmar's -- USD 1,512 vs. USD 1,400. The plots below show the trends in the prices of key Cambodian commodities over time. Unlike Myanmar, price increases in meat, rice and oil all began earlier than in Myanmar, with oil spiking around the onset of the COVID-19 pandemic in early 2020. 
+Cambodia was chosen as its GDP per capita is similar to that of Myanmar's -- USD 1,512 vs. USD 1,400. The plots below show the trends in the prices of key Cambodian commodities over time. Unlike Myanmar, price increases in meat, rice and oil all began earlier than in Myanmar, with oil spiking around the onset of the COVID-19 pandemic in early 2020. 
 
 The seasonal price variations in vegetables seem much more set in their patterns and much less volatile than in Myanmar. 
 
